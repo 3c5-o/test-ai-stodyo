@@ -32,8 +32,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Prepare Keystore & Environment Files
+      - name: Prepare Keystores & Environment Files
         run: |
+          # Restore official release keystore if needed
+          if [ -f "my-upload-key.base64" ] && [ ! -f "my-upload-key.jks" ]; then
+            base64 -d my-upload-key.base64 > my-upload-key.jks
+          fi
           # Restore debug.keystore from base64 if not present in checkout
           if [ -f "debug.keystore.base64" ] && [ ! -f "debug.keystore" ]; then
             base64 -d debug.keystore.base64 > debug.keystore
@@ -45,14 +49,25 @@ jobs:
           # Ensure gradlew has executable permissions
           chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace --no-daemon
+      - name: Build Android APKs (Release & Debug)
+        run: ./gradlew assembleRelease assembleDebug --stacktrace --no-daemon
+        env:
+          STORE_PASSWORD: "android"
+          KEY_PASSWORD: "android"
+          KEYSTORE_PATH: "my-upload-key.jks"
 
-      - name: Upload APK Artifact
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MobilyPro-Release-Official-APK
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: MobilyPro-Debug-APK
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
       - name: Create GitHub Release
@@ -61,22 +76,33 @@ jobs:
         continue-on-error: true
         with:
           tag_name: release-${{ github.run_number }}
-          name: "مبايلي برو APK - إصدار تلقائي #${{ github.run_number }}"
+          name: "مبايلي برو APK - إصدار رسمي #${{ github.run_number }}"
           body: |
             ### 📱 تطبيق مبايلي برو (Mobily Pro) - إدارة محلات الهواتف والصيانة
             
-            تم بناء ملف التطبيق بنجاح وبشكل آلي عبر خوادم GitHub Actions السحابية.
+            تم بناء ملفات التطبيق بنجاح وبشكل آلي عبر خوادم GitHub Actions السحابية مع التوقيع الرقمي الرسمي لحل مشكلة خطأ حزمة التطبيق.
             
             - **رقم البناء**: `${{ github.run_number }}`
             - **الفرع**: `${{ github.ref_name }}`
-            - **الحالة**: ناجح وجاهز للتثبيت الفوري 🚀
+            - **الأيقونة**: أيقونة مخصصة عصرية مدمجة في الحزمة
+            - **الحالة**: تم التوقيع بنجاح وجاهز للتثبيت الفوري 🚀
             
-            #### 📥 طريقة التثبيت على الهاتف:
-            1. قم بتحميل ملف `app-debug.apk` الموجود في المرفقات (Assets) أدناه.
-            2. افتح الملف على هاتفك واضغط **تثبيت (Install)**.
-            3. إذا طلب هاتفك تفعيل "تثبيت التطبيقات من مصادر غير معروفة"، وافق لمرة واحدة.
+            #### 📥 ملفات التطبيق المتاحة للتحميل في المرفقات (Assets):
+            
+            1. **`app-release.apk` (النسخة الموصى بها ⭐)**:
+               - نسخة الإنتاج الرسمية الموقعة بشهادة Keystore رقمية حقيقية.
+               - تحل مشكلة "خطأ في حزمة التطبيق" (Parse Error) وتثبت على جميع هواتف أندرويد 7+.
+               
+            2. **`app-debug.apk` (نسخة تجريبية)**:
+               - نسخة مخصصة للمطورين والفحص.
+            
+            #### 💡 تنبيه هام لتثبيت ناجح بدون أخطاء:
+            - تأكد من الضغط على زر التحميل المباشر لملف الـ APK وحفظه كملف بصيغة `.apk` بحجم تقريبي 19 ميجابايت (وليس حفظ صفحة HTML).
+            - افتح الملف المحمل واضغط **تثبيت (Install)**.
           draft: false
           prerelease: false
-          files: app/build/outputs/apk/debug/*.apk
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

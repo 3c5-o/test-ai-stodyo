@@ -5,6 +5,7 @@
 # Binary files must not be altered
 *.jar binary
 *.keystore binary
+*.jks binary
 *.png binary
 *.jpg binary
 *.webp binary
