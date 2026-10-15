@@ -1,0 +1,12 @@
+# Ensure gradlew uses LF line endings
+/gradlew text eol=lf
+*.sh text eol=lf
+
+# Binary files must not be altered
+*.jar binary
+*.keystore binary
+*.png binary
+*.jpg binary
+*.webp binary
+*.ttf binary
+*.otf binary
