@@ -1,0 +1,6 @@
+{
+  "name": "مبايلي برو - إدارة محلات الهواتف",
+  "description": "تطبيق إدارة محلات الهواتف الذكية والصيانة والمبيعات والمخزون بمميزات فاخرة",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
