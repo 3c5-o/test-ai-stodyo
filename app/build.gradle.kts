@@ -26,16 +26,24 @@ android {
   signingConfigs {
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
+      val kFile = file(keystorePath)
+      storeFile = if (kFile.exists()) kFile else file("my-upload-key.jks")
+      storePassword = System.getenv("STORE_PASSWORD") ?: "android"
       keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+      enableV1Signing = true
+      enableV2Signing = true
+      enableV3Signing = true
     }
     create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
+      val dFile = file("${rootDir}/debug.keystore")
+      storeFile = if (dFile.exists()) dFile else file("debug.keystore")
       storePassword = "android"
       keyAlias = "androiddebugkey"
       keyPassword = "android"
+      enableV1Signing = true
+      enableV2Signing = true
+      enableV3Signing = true
     }
   }
 
@@ -60,6 +68,17 @@ android {
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
+  }
+  packaging {
+    resources {
+      excludes += "/META-INF/{AL2.0,LGPL2.1}"
+      excludes += "META-INF/NOTICE.md"
+      excludes += "META-INF/LICENSE.md"
+      excludes += "META-INF/LICENSE.txt"
+      excludes += "META-INF/license.txt"
+      excludes += "META-INF/notice.txt"
+      excludes += "META-INF/INDEX.LIST"
+    }
   }
 }
 
