@@ -54,6 +54,15 @@ class StoreRepository(
     suspend fun updateAccessory(item: AccessoryItem) = accessoryDao.updateAccessory(item)
     suspend fun deleteAccessory(item: AccessoryItem) = accessoryDao.deleteAccessory(item)
 
+    // Restore Backup Data
+    suspend fun restoreBackupData(backup: com.example.data.local.BackupContent) {
+        backup.phones.forEach { phoneDao.insertPhone(it) }
+        backup.invoices.forEach { saleDao.insertInvoice(it) }
+        backup.repairs.forEach { repairDao.insertRepairTicket(it) }
+        backup.debts.forEach { debtDao.insertDebt(it) }
+        backup.accessories.forEach { accessoryDao.insertAccessory(it) }
+    }
+
     // Populate initial rich demo data if empty
     suspend fun checkAndSeedInitialData() {
         val existingPhones = phoneDao.getAllPhones().first()

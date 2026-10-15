@@ -71,6 +71,9 @@ class StoreViewModel(application: Application) : AndroidViewModel(application) {
     val soldPhones: StateFlow<List<PhoneDevice>> = repository.soldPhones
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val allPhones: StateFlow<List<PhoneDevice>> = repository.allPhones
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val allInvoices: StateFlow<List<SaleInvoice>> = repository.allInvoices
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -405,6 +408,33 @@ class StoreViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteInvoice(invoice: SaleInvoice) {
         viewModelScope.launch {
             repository.deleteInvoice(invoice)
+        }
+    }
+
+    // Offline Backup & Restore Functions
+    fun exportBackup(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val json = com.example.data.local.BackupManager.generateBackupJson(
+                phones = allPhones.value.ifEmpty { inStockPhones.value + soldPhones.value },
+                invoices = allInvoices.value,
+                repairs = allRepairs.value,
+                debts = allDebts.value,
+                accessories = allAccessories.value
+            )
+            onResult(json)
+        }
+    }
+
+    fun restoreBackup(jsonStr: String, onComplete: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val backup = com.example.data.local.BackupManager.parseBackupJson(jsonStr)
+                repository.restoreBackupData(backup)
+                val summary = "تمت استعادة: ${backup.phones.size} هاتف، ${backup.invoices.size} فاتورة، ${backup.repairs.size} صيانة"
+                onComplete(true, summary)
+            } catch (e: Exception) {
+                onComplete(false, "خطأ في قراءة ملف النسخة: ${e.message}")
+            }
         }
     }
 

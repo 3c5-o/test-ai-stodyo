@@ -266,51 +266,110 @@ fun InvoiceDetailDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Bottom Buttons
-                Row(
+                // Bottom Buttons with WhatsApp, Share/Copy, and Dismiss
+                val formattedInvoiceText = """
+                    ━━━━━━━━━━━━━━━━━━━━━━
+                    🧾 *فاتورة إلكترونية - ${storeProfile.storeName}*
+                    ━━━━━━━━━━━━━━━━━━━━━━
+                    🔖 *رقم الفاتورة:* ${invoice.invoiceNumber}
+                    📅 *التاريخ:* $dateFormatted
+                    👤 *العميل:* ${invoice.customerName}
+                    📞 *الهاتف:* ${invoice.customerPhone}
+
+                    📦 *المنتجات والأصناف:*
+                    ${invoice.itemsSummary}
+
+                    💰 *الإجمالي:* ${formatMoney(invoice.totalAmount, storeProfile.currency)}
+                    ${if (invoice.discountAmount > 0) "🏷️ *الخصم الممنوح:* -${formatMoney(invoice.discountAmount, storeProfile.currency)}\n" else ""}💵 *الصافي الإجمالي:* ${formatMoney(invoice.netTotal, storeProfile.currency)}
+                    ✅ *المبلغ المدفوع:* ${formatMoney(invoice.paidAmount, storeProfile.currency)}
+                    ${if (invoice.remainingAmount > 0) "⚠️ *المبلغ المتبقي:* ${formatMoney(invoice.remainingAmount, storeProfile.currency)}\n" else ""}💳 *طريقة الدفع:* ${when(invoice.paymentMethod){"CASH"->"نقدي";"CARD"->"مدى / بطاقة";"TRANSFER"->"تحويل بنكي";else->"أقساط"}}
+
+                    🛡️ *الضمان والسياسة:* ${invoice.warrantyTerms}
+                    📍 ${storeProfile.address} • هاتف: ${storeProfile.phoneNumber}
+                    ━━━━━━━━━━━━━━━━━━━━━━
+                    ✨ شكراً لتعاملكم معنا!
+                """.trimIndent()
+
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    LuxuryOutlinedButton(
-                        text = "مشاركة الفاتورة",
-                        icon = Icons.Default.Share,
-                        onClick = {
-                            val shareBody = """
-                                📄 فاتورة إلكترونية - ${storeProfile.storeName}
-                                رقم الفاتورة: ${invoice.invoiceNumber}
-                                التاريخ: $dateFormatted
-                                العميل: ${invoice.customerName} (${invoice.customerPhone})
-                                
-                                الأصناف:
-                                ${invoice.itemsSummary}
-                                
-                                الإجمالي الصافي: ${formatMoney(invoice.netTotal, storeProfile.currency)}
-                                المدفوع: ${formatMoney(invoice.paidAmount, storeProfile.currency)}
-                                المتبقي: ${formatMoney(invoice.remainingAmount, storeProfile.currency)}
-                                طريقة الدفع: ${invoice.paymentMethod}
-                                
-                                الضمان: ${invoice.warrantyTerms}
-                                شكراً لثقتكم بنا!
-                            """.trimIndent()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // WhatsApp Direct Share Button
+                        Button(
+                            onClick = {
+                                try {
+                                    val cleanPhone = invoice.customerPhone.replace("[^0-9]".toRegex(), "")
+                                    val whatsappUri = if (cleanPhone.length >= 9) {
+                                        android.net.Uri.parse("https://api.whatsapp.com/send?phone=$cleanPhone&text=${android.net.Uri.encode(formattedInvoiceText)}")
+                                    } else {
+                                        android.net.Uri.parse("https://api.whatsapp.com/send?text=${android.net.Uri.encode(formattedInvoiceText)}")
+                                    }
+                                    val waIntent = Intent(Intent.ACTION_VIEW, whatsappUri)
+                                    context.startActivity(waIntent)
+                                } catch (e: Exception) {
+                                    // Fallback to standard share
+                                    val sendIntent = Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        putExtra(Intent.EXTRA_TEXT, formattedInvoiceText)
+                                        type = "text/plain"
+                                    }
+                                    context.startActivity(Intent.createChooser(sendIntent, "مشاركة الفاتورة عبر واتساب"))
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).testTag("whatsapp_invoice_button")
+                        ) {
+                            Icon(Icons.Default.Send, contentDescription = null, tint = ObsidianNavyBg, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("إرسال واتساب", color = ObsidianNavyBg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
 
-                            val sendIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_TEXT, shareBody)
-                                type = "text/plain"
-                            }
-                            context.startActivity(Intent.createChooser(sendIntent, "مشاركة الفاتورة"))
-                        },
-                        modifier = Modifier.weight(1f),
-                        testTag = "share_invoice_button"
-                    )
+                        // Copy Text Button
+                        LuxuryOutlinedButton(
+                            text = "نسخ النص",
+                            icon = Icons.Default.ContentCopy,
+                            onClick = {
+                                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("InvoiceText", formattedInvoiceText))
+                                android.widget.Toast.makeText(context, "تم نسخ تفاصيل الفاتورة بنجاح 📋", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                            testTag = "copy_invoice_button"
+                        )
+                    }
 
-                    LuxuryButton(
-                        text = "تم / إغلاق",
-                        icon = Icons.Default.Check,
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        testTag = "dismiss_invoice_button"
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LuxuryOutlinedButton(
+                            text = "مشاركة عامة",
+                            icon = Icons.Default.Share,
+                            onClick = {
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, formattedInvoiceText)
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "مشاركة الفاتورة"))
+                            },
+                            modifier = Modifier.weight(1f),
+                            testTag = "share_invoice_button"
+                        )
+
+                        LuxuryButton(
+                            text = "إغلاق",
+                            icon = Icons.Default.Check,
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f),
+                            testTag = "dismiss_invoice_button"
+                        )
+                    }
                 }
             }
         }

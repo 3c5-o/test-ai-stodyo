@@ -196,6 +196,135 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth().testTag("save_settings_btn")
             )
 
+            // Offline Backup & Restore Section
+            var showRestoreDialog by remember { mutableStateOf(false) }
+            var restoreJsonInput by remember { mutableStateOf("") }
+
+            LuxuryCard(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CloudSync, contentDescription = null, tint = EmeraldGreen)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("النسخ الاحتياطي واستعادة البيانات (أوفلاين)", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = TextWhite)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "احفظ نسخة كاملة من سجلات الأجهزة والمخزون، تذاكر الصيانة، والفواتير على هاتفك واستعدها في أي وقت دون الحاجة للإنترنت.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LuxuryButton(
+                        text = "تصدير نسخة احتياطية",
+                        icon = Icons.Default.FileDownload,
+                        onClick = {
+                            viewModel.exportBackup { jsonStr ->
+                                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("MobilyPro_Backup", jsonStr))
+
+                                val shareIntent = android.content.Intent().apply {
+                                    action = android.content.Intent.ACTION_SEND
+                                    putExtra(android.content.Intent.EXTRA_TEXT, jsonStr)
+                                    type = "application/json"
+                                }
+                                context.startActivity(android.content.Intent.createChooser(shareIntent, "حفظ أو إرسال النسخة الاحتياطية"))
+                                Toast.makeText(context, "تم نسخ وتصدير بيانات المتجر بنجاح 💾", Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        containerColor = EmeraldGreen,
+                        contentColor = ObsidianNavyBg,
+                        modifier = Modifier.weight(1f),
+                        testTag = "export_backup_btn"
+                    )
+
+                    LuxuryOutlinedButton(
+                        text = "استعادة بيانات",
+                        icon = Icons.Default.FileUpload,
+                        onClick = {
+                            restoreJsonInput = ""
+                            showRestoreDialog = true
+                        },
+                        borderColor = EmeraldGreen,
+                        modifier = Modifier.weight(1f),
+                        testTag = "import_backup_btn"
+                    )
+                }
+            }
+
+            // GitHub Actions CI/CD APK Info Card
+            LuxuryCard(
+                modifier = Modifier.fillMaxWidth(),
+                backgroundColor = ObsidianSurfaceBg,
+                borderBrush = Brush.horizontalGradient(listOf(ElectricBlue, ObsidianBorder))
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.BuildCircle, contentDescription = null, tint = ElectricBlue, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("بناء وتنزيل APK عبر GitHub Actions", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = ElectricBlue)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "تم إعداد سير عمل GitHub Actions تلقائي في المستودع (.github/workflows/build-apk.yml):\n" +
+                            "• عند كل Push أو رفع للمستودع، يقوم GitHub تلقائياً ببناء ملف app-debug.apk.\n" +
+                            "• يتم رفع ملف الـ APK ونشره في تبويب Releases برابط تحميل فوري دون الحاجة لـ AndroidIDE.\n" +
+                            "• يمكنك تحميل الملف وتثبيته على هاتفك مباشرة في أي وقت.",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                    color = TextMuted,
+                    lineHeight = 18.sp
+                )
+            }
+
+            // Restore Dialog
+            if (showRestoreDialog) {
+                AlertDialog(
+                    onDismissRequest = { showRestoreDialog = false },
+                    title = { Text("استعادة النسخة الاحتياطية", color = GoldPrimary, fontWeight = FontWeight.Bold) },
+                    text = {
+                        Column {
+                            Text("الصق محتوى نص ملف النسخة الاحتياطية (JSON) أدناه:", color = TextWhite, fontSize = 13.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = restoreJsonInput,
+                                onValueChange = { restoreJsonInput = it },
+                                placeholder = { Text("{ \"app\": \"MobilyPro\", ... }", color = TextDim) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(140.dp),
+                                maxLines = 6,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = EmeraldGreen,
+                                    unfocusedBorderColor = ObsidianBorder,
+                                    focusedTextColor = TextWhite,
+                                    unfocusedTextColor = TextWhite
+                                )
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (restoreJsonInput.isNotBlank()) {
+                                    viewModel.restoreBackup(restoreJsonInput) { success, msg ->
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                        if (success) showRestoreDialog = false
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen)
+                        ) {
+                            Text("استعادة الآن", color = ObsidianNavyBg, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showRestoreDialog = false }) {
+                            Text("إلغاء", color = TextMuted)
+                        }
+                    },
+                    containerColor = ObsidianCardBg
+                )
+            }
+
             // App Version & Luxury Edition Badge
             Box(
                 modifier = Modifier
@@ -205,7 +334,7 @@ fun SettingsScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("تطبيق مبايلي برو لإدارة محلات وصيانة الهواتف", style = MaterialTheme.typography.labelSmall, color = TextDim)
-                    Text("إصدار المتاجر الفاخرة • Version 2026.1", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = GoldDark)
+                    Text("إصدار المتاجر الفاخرة • Version 2026.1 (مع GitHub Actions)", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = GoldDark)
                 }
             }
 

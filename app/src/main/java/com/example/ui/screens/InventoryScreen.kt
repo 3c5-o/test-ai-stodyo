@@ -187,18 +187,51 @@ fun InventoryScreen(
                 }
             }
 
-            // Brand Filter Chips
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(brandList) { brand ->
-                    BrandChip(
-                        brandName = brand,
-                        isSelected = selectedBrandFilter == brand,
-                        onSelect = { selectedBrandFilter = brand }
-                    )
+            // Brand & Condition Filter Chips
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(brandList) { brand ->
+                        BrandChip(
+                            brandName = brand,
+                            isSelected = selectedBrandFilter == brand,
+                            onSelect = { selectedBrandFilter = brand }
+                        )
+                    }
+                }
+
+                val conditionDisplay = listOf(
+                    "الكل" to "جميع الحالات",
+                    "NEW_SEALED" to "📦 جديد كرتون",
+                    "LIKE_NEW" to "✨ كالجديد",
+                    "USED_GOOD" to "📱 مستعمل نظيف",
+                    "REFURBISHED" to "🛠️ مجدد معتمد"
+                )
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(conditionDisplay) { (key, label) ->
+                        val isSel = selectedConditionFilter == key
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(1.dp, if (isSel) GoldPrimary else ObsidianBorder, RoundedCornerShape(10.dp))
+                                .clickable { selectedConditionFilter = key },
+                            color = if (isSel) GoldPrimary.copy(alpha = 0.2f) else ObsidianSurfaceBg
+                        ) {
+                            Text(
+                                text = label,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                color = if (isSel) GoldAccent else TextMuted,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal)
+                            )
+                        }
+                    }
                 }
             }
 

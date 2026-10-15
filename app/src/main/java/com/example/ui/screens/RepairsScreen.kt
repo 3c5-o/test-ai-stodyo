@@ -221,21 +221,43 @@ fun RepairsScreen(
                                     // Share notification with customer
                                     IconButton(
                                         onClick = {
+                                            val remainingCost = ticket.totalCost - ticket.paidAmount
                                             val msg = """
-                                                السلام عليكم ${ticket.customerName}،
-                                                تحديث بخصوص جهازك (${ticket.deviceModel}) لدى ${storeProfile.storeName}
-                                                رقم التذكرة: ${ticket.ticketNumber}
-                                                الحالة الحالية: ${statusEnum.titleAr}
-                                                المبلغ المطلوب: ${formatMoney(ticket.totalCost - ticket.paidAmount, storeProfile.currency)}
+                                                ━━━━━━━━━━━━━━━━━━━━━━
+                                                🔧 *مركز صيانة ${storeProfile.storeName}*
+                                                ━━━━━━━━━━━━━━━━━━━━━━
+                                                مرحباً أستاذ *${ticket.customerName}*،
+                                                تحديث حالة جهازك: *${ticket.deviceModel}*
                                                 
-                                                شكراً لثقتكم بنا!
+                                                🔖 *رقم التذكرة:* ${ticket.ticketNumber}
+                                                🔍 *العطل:* ${ticket.problemDescription}
+                                                ⚙️ *الحالة الحالية:* *${statusEnum.titleAr}*
+                                                
+                                                💰 *إجمالي التكلفة:* ${formatMoney(ticket.totalCost, storeProfile.currency)}
+                                                ✅ *المدفوع مقدماً:* ${formatMoney(ticket.paidAmount, storeProfile.currency)}
+                                                ${if (remainingCost > 0) "💵 *المتبقي عند الاستلام:* ${formatMoney(remainingCost, storeProfile.currency)}\n" else ""}
+                                                📍 ${storeProfile.address}
+                                                📞 للاستفسار: ${storeProfile.phoneNumber}
+                                                ━━━━━━━━━━━━━━━━━━━━━━
+                                                ✨ نسعد دائماً بخدمتكم!
                                             """.trimIndent()
-                                            val shareIntent = Intent().apply {
-                                                action = Intent.ACTION_SEND
-                                                putExtra(Intent.EXTRA_TEXT, msg)
-                                                type = "text/plain"
+                                            try {
+                                                val cleanPhone = ticket.customerPhone.replace("[^0-9]".toRegex(), "")
+                                                val whatsappUri = if (cleanPhone.length >= 9) {
+                                                    android.net.Uri.parse("https://api.whatsapp.com/send?phone=$cleanPhone&text=${android.net.Uri.encode(msg)}")
+                                                } else {
+                                                    android.net.Uri.parse("https://api.whatsapp.com/send?text=${android.net.Uri.encode(msg)}")
+                                                }
+                                                val waIntent = Intent(Intent.ACTION_VIEW, whatsappUri)
+                                                context.startActivity(waIntent)
+                                            } catch (e: Exception) {
+                                                val shareIntent = Intent().apply {
+                                                    action = Intent.ACTION_SEND
+                                                    putExtra(Intent.EXTRA_TEXT, msg)
+                                                    type = "text/plain"
+                                                }
+                                                context.startActivity(Intent.createChooser(shareIntent, "إرسال إشعار للعميل"))
                                             }
-                                            context.startActivity(Intent.createChooser(shareIntent, "إرسال إشعار للعميل"))
                                         },
                                         modifier = Modifier.size(32.dp)
                                     ) {
